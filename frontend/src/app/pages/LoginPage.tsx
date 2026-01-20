@@ -1,40 +1,55 @@
-import { useEffect, useState } from 'react';
-import { useNavigate, Link, useLocation } from 'react-router-dom';
-import { GraduationCap, Mail, Lock } from 'lucide-react';
+import { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { GraduationCap, Mail, Lock, AlertCircle } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Card } from '../components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { useAuth } from '../../hooks/useAuth';
+import { getDefaultRoute } from '../../utils/rolePageMap';
+import { handleAPIError } from '../../utils/errorHandler';
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const location = useLocation();
-  const [role, setRole] = useState<string>('student');
-  const [redirectTo, setRedirectTo] = useState<string | null>(null);
+  const { login, isLoading } = useAuth();
+  
+  const [formData, setFormData] = useState({
+    email: '',
+    password: '',
+  });
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const r = params.get('role');
-    const redirect = params.get('redirect');
-    if (r) setRole(r);
-    if (redirect) setRedirectTo(redirect);
-  }, [location.search]);
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    setError(null); // Clear error when user starts typing
+  };
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    // After successful login, navigate to redirect param if present, otherwise go by role
-    if (redirectTo) {
-      navigate(redirectTo);
+    setError(null);
+
+    // Client-side validation
+    if (!formData.email || !formData.password) {
+      setError('Email and password are required');
       return;
     }
 
-    if (role === 'student') {
-      navigate('/student/dashboard');
-    } else if (role === 'alumni') {
-      navigate('/alumni/dashboard');
-    } else {
-      navigate('/management/dashboard');
+    try {
+      // Call the login function from AuthContext
+      await login(formData.email, formData.password);
+      
+      // AuthContext will update user state, we can read it after login
+      // Get user from localStorage to determine redirect
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        const user = JSON.parse(userStr);
+        const defaultRoute = getDefaultRoute(user.role);
+        navigate(defaultRoute);
+      }
+    } catch (err) {
+      const { message } = handleAPIError(err);
+      setError(message);
     }
   };
 
@@ -50,30 +65,28 @@ export default function LoginPage() {
           <p className="text-slate-600">Sign in to access your account</p>
         </div>
 
-        <form onSubmit={handleLogin} className="space-y-5">
-          <div className="space-y-2">
-            <Label htmlFor="role">Select Role</Label>
-            <Select value={role} onValueChange={setRole}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="student">Student</SelectItem>
-                <SelectItem value="alumni">Alumni</SelectItem>
-                <SelectItem value="management">College Management</SelectItem>
-              </SelectContent>
-            </Select>
+        {/* Error Display */}
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2">
+            <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
+            <div className="text-sm text-red-700">{error}</div>
           </div>
+        )}
 
+        <form onSubmit={handleLogin} className="space-y-5">
           <div className="space-y-2">
             <Label htmlFor="email">Email Address</Label>
             <div className="relative">
               <Mail className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
               <Input 
-                id="email" 
+                id="email"
+                name="email"
                 type="email" 
                 placeholder="your.email@example.com" 
                 className="pl-10"
+                value={formData.email}
+                onChange={handleChange}
+                disabled={isLoading}
                 required
               />
             </div>
@@ -84,10 +97,14 @@ export default function LoginPage() {
             <div className="relative">
               <Lock className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
               <Input 
-                id="password" 
+                id="password"
+                name="password"
                 type="password" 
                 placeholder="••••••••" 
                 className="pl-10"
+                value={formData.password}
+                onChange={handleChange}
+                disabled={isLoading}
                 required
               />
             </div>
@@ -95,16 +112,31 @@ export default function LoginPage() {
 
           <div className="flex items-center justify-between">
             <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" className="rounded" />
+              <input type="checkbox" className="rounded" disabled={isLoading} />
               <span className="text-slate-600">Remember me</span>
             </label>
-            <Link to="/forgot-password" className="text-sm text-blue-900 hover:underline">
+            <Link 
+              to="/forgot-password" 
+              className="text-sm text-blue-900 hover:underline"
+              tabIndex={isLoading ? -1 : 0}
+            >
               Forgot password?
             </Link>
           </div>
 
-          <Button type="submit" className="w-full bg-blue-900 hover:bg-blue-800">
-            Sign In
+          <Button 
+            type="submit" 
+            className="w-full bg-blue-900 hover:bg-blue-800"
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <span className="flex items-center gap-2">
+                <span className="animate-spin">⏳</span>
+                Signing in...
+              </span>
+            ) : (
+              'Sign In'
+            )}
           </Button>
         </form>
 
