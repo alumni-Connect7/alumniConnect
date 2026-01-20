@@ -7,6 +7,6 @@ const router = express.Router();
 
 router.get('/', auth, allowRoles('admin'), getAllUsers);
 router.patch('/:userId/approve', auth, allowRoles('admin'), approveAlumni);
-router.get('/alumni/approved', auth, allowRoles('student'), getApprovedAlumni);
+router.get('/alumni/approved', auth, allowRoles('student', 'alumni', 'admin'), getApprovedAlumni);
 
 module.exports = router;

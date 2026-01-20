@@ -1,18 +1,38 @@
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../components/DashboardLayout';
 import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
-import { Users, TrendingUp, Calendar, FileText, Download } from 'lucide-react';
+import { Users, TrendingUp, Calendar, FileText, Download, AlertCircle } from 'lucide-react';
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { adminAPI, AdminStatsResponse } from '../../api/endpoints';
+import { handleAPIError } from '../../utils/errorHandler';
 
 export default function ManagementDashboard() {
   const navigate = useNavigate();
 
+  const [statsData, setStatsData] = useState<AdminStatsResponse | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        setError(null);
+        const res = await adminAPI.getStats();
+        setStatsData(res.data.stats);
+      } catch (err) {
+        const { message } = handleAPIError(err);
+        setError(message);
+      }
+    };
+    load();
+  }, []);
+
   const stats = [
-    { label: 'Total Alumni', value: '5,234', change: '+12%', icon: <Users className="w-6 h-6" />, color: 'bg-green-500' },
-    { label: 'Active Alumni', value: '2,156', change: '+8%', icon: <TrendingUp className="w-6 h-6" />, color: 'bg-blue-500' },
-    { label: 'Events This Year', value: '48', change: '+5', icon: <Calendar className="w-6 h-6" />, color: 'bg-purple-500' },
-    { label: 'Avg ATS Score', value: '76%', change: '+4%', icon: <FileText className="w-6 h-6" />, color: 'bg-orange-500' },
+    { label: 'Total Alumni', value: statsData?.alumni ?? '—', change: '', icon: <Users className="w-6 h-6" />, color: 'bg-green-500' },
+    { label: 'Pending Approvals', value: statsData?.pendingAlumni ?? '—', change: '', icon: <TrendingUp className="w-6 h-6" />, color: 'bg-blue-500' },
+    { label: 'Upcoming Events', value: statsData?.events?.upcoming ?? '—', change: '', icon: <Calendar className="w-6 h-6" />, color: 'bg-purple-500' },
+    { label: 'Open Opportunities', value: statsData?.jobs?.open ?? '—', change: '', icon: <FileText className="w-6 h-6" />, color: 'bg-orange-500' },
   ];
 
   const engagementData = [
@@ -24,13 +44,11 @@ export default function ManagementDashboard() {
     { month: 'Dec', alumni: 2156, students: 2680 },
   ];
 
-  const departmentData = [
-    { name: 'Computer Science', value: 1840, color: '#3b82f6' },
-    { name: 'Electrical Engineering', value: 1245, color: '#14b8a6' },
-    { name: 'Mechanical Engineering', value: 1028, color: '#8b5cf6' },
-    { name: 'Civil Engineering', value: 821, color: '#f59e0b' },
-    { name: 'Others', value: 300, color: '#6b7280' },
-  ];
+  const departmentData = (statsData?.alumniByCompany || []).map((entry, idx) => ({
+    name: entry._id || 'Unknown',
+    value: entry.count,
+    color: ['#3b82f6', '#14b8a6', '#8b5cf6', '#f59e0b', '#6b7280'][idx % 5],
+  }));
 
   const atsScoreData = [
     { range: '0-20', count: 45 },
@@ -43,6 +61,12 @@ export default function ManagementDashboard() {
   return (
     <DashboardLayout role="management" userName="Dr. Admin">
       <div className="space-y-6">
+        {error && (
+          <div className="p-3 bg-red-50 text-red-700 border border-red-200 rounded flex items-center gap-2">
+            <AlertCircle className="w-4 h-4" />
+            <span>{error}</span>
+          </div>
+        )}
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl mb-2 text-slate-900">Management Dashboard</h1>

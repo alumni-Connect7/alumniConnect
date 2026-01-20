@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import DashboardLayout from '../components/DashboardLayout';
 import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -17,8 +17,13 @@ import {
   X,
   Plus,
   Trash2,
-  CheckCircle
+  CheckCircle,
+  AlertCircle,
+  CheckCircle2
 } from 'lucide-react';
+import { useAuth } from '../../hooks/useAuth';
+import { profileAPI, Profile } from '../../api/endpoints';
+import { handleAPIError } from '../../utils/errorHandler';
 
 interface Education {
   id: number;
@@ -53,47 +58,108 @@ interface Experience {
 }
 
 export default function ProfilePage() {
+  const { user } = useAuth();
   const [editingPersonal, setEditingPersonal] = useState(false);
   const [editingEducation, setEditingEducation] = useState(false);
   const [editingSkills, setEditingSkills] = useState(false);
   const [editingCertifications, setEditingCertifications] = useState(false);
   const [editingExperience, setEditingExperience] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
   const [personalData, setPersonalData] = useState({
-    name: 'Nikhil Satya',
-    email: '22bq1a42g8@vvit.net',
-    phone: '+91 9812345678',
-    location: 'Guntur, India',
-    bio: 'Passionate computer science student with interests in machine learning and data science. Currently seeking mentorship to explore career paths in AI and software engineering.',
-    linkedIn: 'https://linkedin.com/in/nikhilsatya',
-    github: 'https://github.com/nikhilsatya'
+    name: user?.name || '',
+    email: user?.email || '',
+    phone: '',
+    location: '',
+    bio: '',
+    linkedIn: '',
+    github: '',
+    headline: '',
   });
 
-  const [educations, setEducations] = useState<Education[]>([
-    { id: 1, degree: 'Bachelor of Technology - Computer Science', institution: 'Vasireddy Venkatadri Institute of Technology', startYear: '2022', endYear: '2026', cgpa: '8.5' }
-  ]);
+  const [educations, setEducations] = useState<Education[]>([]);
 
   const [skills, setSkills] = useState<Skill[]>([
     { id: 1, name: 'Python', level: 'Advanced' },
-    { id: 2, name: 'JavaScript', level: 'Intermediate' },
-    { id: 3, name: 'React', level: 'Advanced' },
-    { id: 4, name: 'Node.js', level: 'Intermediate' },
-    { id: 5, name: 'SQL', level: 'Intermediate' },
-    { id: 6, name: 'Machine Learning', level: 'Beginner' }
   ]);
 
   const [certifications, setCertifications] = useState<Certification[]>([
-    { id: 1, name: 'AWS Solutions Architect Associate', issuer: 'Amazon Web Services', date: '2024' },
-    { id: 2, name: 'Google Cloud Professional Data Engineer', issuer: 'Google Cloud', date: '2023' },
-    { id: 3, name: 'Python for Data Science', issuer: 'Coursera', date: '2024' }
+    { id: 1, name: '', issuer: '', date: '' },
   ]);
 
   const [experiences, setExperiences] = useState<Experience[]>([
-    { id: 1, title: 'Frontend Developer', company: 'Tech Startup XYZ', type: 'Internship', startDate: 'Jun 2023', endDate: 'Aug 2023', description: 'Developed responsive web applications using React and Tailwind CSS' },
-    { id: 2, title: 'Full Stack Developer', company: 'Freelance', type: 'Freelancing', startDate: 'Sep 2023', endDate: 'Present', description: 'Building custom web solutions for various clients' }
+    { id: 1, title: '', company: '', type: 'Internship', startDate: '', endDate: '', description: '' },
   ]);
 
   const [tempPersonal, setTempPersonal] = useState(personalData);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        setLoading(true);
+        const res = await profileAPI.getMe();
+        const profile: Profile | undefined = res.data.profile;
+        setPersonalData((prev) => ({
+          ...prev,
+          name: res.data.user.name,
+          email: res.data.user.email,
+          location: profile?.location || '',
+          bio: profile?.bio || '',
+          linkedIn: profile?.socials?.linkedin || '',
+          github: profile?.socials?.github || '',
+          phone: profile?.phone || '',
+          headline: profile?.headline || '',
+        }));
+        setSkills(
+          (profile?.skills || []).map((s, idx) => ({
+            id: idx + 1,
+            name: s.name,
+            level:
+              s.level === 'advanced'
+                ? 'Advanced'
+                : s.level === 'intermediate'
+                ? 'Intermediate'
+                : 'Beginner',
+          }))
+        );
+        setCertifications(
+          (profile?.certifications || []).map((c, idx) => ({
+            id: idx + 1,
+            name: c.name,
+            issuer: c.issuer || '',
+            date: c.year || '',
+          }))
+        );
+        setExperiences(
+          (profile?.experience || []).map((exp, idx) => ({
+            id: idx + 1,
+            title: exp.title || '',
+            company: exp.company || '',
+            type:
+              exp.type === 'freelancing'
+                ? 'Freelancing'
+                : exp.type === 'full-time'
+                ? 'Full-time'
+                : exp.type === 'part-time'
+                ? 'Part-time'
+                : 'Internship',
+            startDate: exp.startDate || '',
+            endDate: exp.endDate || '',
+            description: exp.description || '',
+          }))
+        );
+      } catch (err) {
+        const { message } = handleAPIError(err);
+        setError(message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    load();
+  }, [user?.email, user?.name]);
 
   const handlePersonalEdit = () => {
     setEditingPersonal(true);
@@ -103,6 +169,7 @@ export default function ProfilePage() {
   const handlePersonalSave = () => {
     setPersonalData(tempPersonal);
     setEditingPersonal(false);
+    handleSaveProfile();
   };
 
   const handlePersonalCancel = () => {
@@ -140,9 +207,61 @@ export default function ProfilePage() {
     setExperiences([...experiences, newExp]);
   };
 
+  const handleSaveProfile = async () => {
+    try {
+      setError(null);
+      setSuccess(null);
+      const payload: Partial<Profile> = {
+        headline: personalData.headline,
+        bio: personalData.bio,
+        location: personalData.location,
+        phone: personalData.phone,
+        socials: {
+          linkedin: personalData.linkedIn,
+          github: personalData.github,
+        },
+        skills: skills.map((skill) => ({
+          name: skill.name,
+          level: skill.level.toLowerCase() as 'beginner' | 'intermediate' | 'advanced',
+        })),
+        certifications: certifications
+          .filter((c) => c.name)
+          .map((cert) => ({ name: cert.name, issuer: cert.issuer, year: cert.date })),
+        experience: experiences
+          .filter((e) => e.title || e.company)
+          .map((exp) => ({
+            title: exp.title,
+            company: exp.company,
+            type: exp.type.toLowerCase(),
+            startDate: exp.startDate,
+            endDate: exp.endDate,
+            description: exp.description,
+          })),
+      };
+
+      await profileAPI.updateMe(payload);
+      setSuccess('Profile updated successfully');
+    } catch (err) {
+      const { message } = handleAPIError(err);
+      setError(message);
+    }
+  };
+
   return (
-    <DashboardLayout role="student" userName="Nikhil Satya">
+    <DashboardLayout role={user?.role || 'student'} userName={user?.name || 'User'}>
       <div className="space-y-6">
+        {error && (
+          <div className="p-3 bg-red-50 text-red-700 border border-red-200 rounded flex items-center gap-2">
+            <AlertCircle className="w-4 h-4" />
+            <span>{error}</span>
+          </div>
+        )}
+        {success && (
+          <div className="p-3 bg-green-50 text-green-700 border border-green-200 rounded flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4" />
+            <span>{success}</span>
+          </div>
+        )}
         {/* Personal Details Card */}
         <Card className="p-8">
           <div className="flex items-start gap-6">
@@ -155,7 +274,7 @@ export default function ProfilePage() {
                   <div className="flex items-start justify-between mb-4">
                     <div>
                       <h1 className="text-3xl mb-2 text-slate-900">{personalData.name}</h1>
-                      <p className="text-lg text-slate-600">B.Tech Computer Science • 3rd Year</p>
+                      <p className="text-lg text-slate-600">{personalData.headline || 'Update your headline'}</p>
                     </div>
                     <Button onClick={handlePersonalEdit} className="gap-2">
                       <Edit2 className="w-4 h-4" />
@@ -216,7 +335,7 @@ export default function ProfilePage() {
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <Button onClick={handlePersonalSave}>Save Changes</Button>
+                    <Button onClick={handlePersonalSave} disabled={loading}>Save Changes</Button>
                     <Button variant="outline" onClick={handlePersonalCancel}>Cancel</Button>
                   </div>
                 </div>
@@ -365,6 +484,12 @@ export default function ProfilePage() {
             </Button>
           )}
         </Card>
+
+        <div className="flex justify-end">
+          <Button onClick={handleSaveProfile} disabled={loading}>
+            Save Profile
+          </Button>
+        </div>
       </div>
     </DashboardLayout>
   );
