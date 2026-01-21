@@ -4,7 +4,6 @@ import {
   GraduationCap, 
   LayoutDashboard, 
   Users, 
-  UserCircle, 
   Calendar, 
   BarChart3, 
   Settings, 
@@ -13,7 +12,8 @@ import {
   Menu,
   X,
   Brain,
-  Star
+  Star,
+  Briefcase
 } from 'lucide-react';
 import { Button } from './ui/button';
 import {
@@ -54,19 +54,33 @@ export default function DashboardLayout({ children, role, userName = "User" }: D
   }, [location.pathname]);
 
   const commonNavItems: NavItem[] = [
-    { label: 'Dashboard', icon: <LayoutDashboard className="w-5 h-5" />, path: `/${role}/dashboard` },
     { label: 'Alumni Directory', icon: <Users className="w-5 h-5" />, path: '/alumni-listing' },
     { label: 'Events', icon: <Calendar className="w-5 h-5" />, path: '/events' },
-    { label: 'Career Recommendation', icon: <Brain className="w-5 h-5" />, path: '/career-recommendation' },
+    { label: 'Jobs & Internships', icon: <Briefcase className="w-5 h-5" />, path: '/jobs' },
     { label: 'Success Stories', icon: <Star className="w-5 h-5" />, path: '/success-stories' },
   ];
 
+  const studentNavItems: NavItem[] = [
+    { label: 'Dashboard', icon: <LayoutDashboard className="w-5 h-5" />, path: `/${role}/dashboard` },
+    ...commonNavItems,
+    { label: 'Career Recommendation', icon: <Brain className="w-5 h-5" />, path: '/career-recommendation' },
+  ];
+
+  const alumniNavItems: NavItem[] = [
+    { label: 'Dashboard', icon: <LayoutDashboard className="w-5 h-5" />, path: `/${role}/dashboard` },
+    ...commonNavItems,
+  ];
+
   const managementNavItems: NavItem[] = [
+    { label: 'Dashboard', icon: <LayoutDashboard className="w-5 h-5" />, path: `/${role}/dashboard` },
     ...commonNavItems,
     { label: 'Reports', icon: <BarChart3 className="w-5 h-5" />, path: '/reports' },
   ];
 
-  const navItems = role === 'management' ? managementNavItems : commonNavItems;
+  const navItems = 
+    role === 'management' ? managementNavItems : 
+    role === 'alumni' ? alumniNavItems : 
+    studentNavItems;
 
   const getRoleColor = () => {
     switch (role) {
@@ -181,20 +195,20 @@ export default function DashboardLayout({ children, role, userName = "User" }: D
                   <span>{item.label}</span>
                 </button>
               ))}
+            </nav>
 
+            <div className="p-4 border-t space-y-2">
               <button
                 onClick={() => {
                   navigate('/settings');
                   setSidebarOpen(false);
                 }}
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-700 hover:bg-slate-100 transition-colors mt-4"
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-700 hover:bg-slate-100 transition-colors"
               >
                 <Settings className="w-5 h-5" />
                 <span>Settings</span>
               </button>
-            </nav>
 
-            <div className="p-4 border-t">
               <button
                 onClick={() => {
                   handleLogout();

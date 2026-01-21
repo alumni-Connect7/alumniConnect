@@ -1,138 +1,163 @@
+import { useState } from 'react';
 import DashboardLayout from '../components/DashboardLayout';
 import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
-import { Switch } from '../components/ui/switch';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
+import { useAuth } from '../../hooks/useAuth';
+import { AlertCircle, CheckCircle } from 'lucide-react';
 
 export default function SettingsPage() {
+  const { user } = useAuth();
+  const [formData, setFormData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!formData.currentPassword || !formData.newPassword || !formData.confirmPassword) {
+      setError('All fields are required');
+      return;
+    }
+
+    if (formData.newPassword !== formData.confirmPassword) {
+      setError('New passwords do not match');
+      return;
+    }
+
+    if (formData.newPassword.length < 6) {
+      setError('New password must be at least 6 characters');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await fetch('/api/auth/change-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+        },
+        body: JSON.stringify({
+          currentPassword: formData.currentPassword,
+          newPassword: formData.newPassword,
+        }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.message || 'Failed to change password');
+      }
+
+      setSuccess(true);
+      setFormData({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: '',
+      });
+
+      setTimeout(() => {
+        setSuccess(false);
+      }, 3000);
+    } catch (err: any) {
+      setError(err.message || 'Failed to change password. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const userRole = (user?.role === 'admin' ? 'management' : user?.role || 'student') as 'student' | 'alumni' | 'management';
+
   return (
-    <DashboardLayout role="student" userName="Nikhil Satya">
+    <DashboardLayout role={userRole} userName={user?.name || 'User'}>
       <div className="space-y-6">
         <div>
           <h1 className="text-3xl mb-2 text-slate-900">Settings</h1>
-          <p className="text-slate-600">Manage your account preferences and privacy</p>
+          <p className="text-slate-600">Manage your account security</p>
         </div>
 
-        <Tabs defaultValue="account" className="w-full">
-          <TabsList>
-            <TabsTrigger value="account">Account</TabsTrigger>
-            <TabsTrigger value="notifications">Notifications</TabsTrigger>
-            <TabsTrigger value="privacy">Privacy</TabsTrigger>
-          </TabsList>
+        <Card className="p-6 max-w-2xl">
+          <h2 className="text-2xl font-semibold text-slate-900 mb-6">Change Password</h2>
 
-          <TabsContent value="account" className="space-y-6 mt-6">
-            <Card className="p-6">
-              <h3 className="text-lg mb-4 text-slate-900">Account Information</h3>
-              <div className="space-y-4">
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="firstName">First Name</Label>
-                    <Input id="firstName" defaultValue="Alex" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="lastName">Last Name</Label>
-                    <Input id="lastName" defaultValue="Kumar" />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input id="email" type="email" defaultValue="alex.kumar@college.edu" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Phone</Label>
-                  <Input id="phone" defaultValue="+1 555-123-4567" />
-                </div>
-                <Button>Save Changes</Button>
-              </div>
-            </Card>
+          {error && (
+            <div className="p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3 text-red-700 mb-4">
+              <AlertCircle className="w-5 h-5 flex-shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
 
-            <Card className="p-6">
-              <h3 className="text-lg mb-4 text-slate-900">Change Password</h3>
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="currentPassword">Current Password</Label>
-                  <Input id="currentPassword" type="password" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="newPassword">New Password</Label>
-                  <Input id="newPassword" type="password" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="confirmPassword">Confirm New Password</Label>
-                  <Input id="confirmPassword" type="password" />
-                </div>
-                <Button>Update Password</Button>
-              </div>
-            </Card>
-          </TabsContent>
+          {success && (
+            <div className="p-4 bg-green-50 border border-green-200 rounded-lg flex items-center gap-3 text-green-700 mb-4">
+              <CheckCircle className="w-5 h-5 flex-shrink-0" />
+              <span>Password changed successfully!</span>
+            </div>
+          )}
 
-          <TabsContent value="notifications" className="space-y-6 mt-6">
-            <Card className="p-6">
-              <h3 className="text-lg mb-4 text-slate-900">Email Notifications</h3>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium text-slate-900">Mentorship Requests</p>
-                    <p className="text-sm text-slate-600">Receive emails when mentors respond</p>
-                  </div>
-                  <Switch defaultChecked />
-                </div>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium text-slate-900">Event Updates</p>
-                    <p className="text-sm text-slate-600">Get notified about upcoming events</p>
-                  </div>
-                  <Switch defaultChecked />
-                </div>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium text-slate-900">Resume Analysis</p>
-                    <p className="text-sm text-slate-600">Updates on resume score improvements</p>
-                  </div>
-                  <Switch />
-                </div>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium text-slate-900">Weekly Digest</p>
-                    <p className="text-sm text-slate-600">Weekly summary of platform activity</p>
-                  </div>
-                  <Switch defaultChecked />
-                </div>
-              </div>
-            </Card>
-          </TabsContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="currentPassword">Current Password *</Label>
+              <Input
+                id="currentPassword"
+                name="currentPassword"
+                type="password"
+                value={formData.currentPassword}
+                onChange={handleChange}
+                placeholder="Enter your current password"
+                required
+              />
+            </div>
 
-          <TabsContent value="privacy" className="space-y-6 mt-6">
-            <Card className="p-6">
-              <h3 className="text-lg mb-4 text-slate-900">Privacy Settings</h3>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium text-slate-900">Profile Visibility</p>
-                    <p className="text-sm text-slate-600">Make your profile visible to alumni</p>
-                  </div>
-                  <Switch defaultChecked />
-                </div>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium text-slate-900">Show Contact Information</p>
-                    <p className="text-sm text-slate-600">Display email and phone to verified alumni</p>
-                  </div>
-                  <Switch />
-                </div>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium text-slate-900">Activity Status</p>
-                    <p className="text-sm text-slate-600">Show when you're active on the platform</p>
-                  </div>
-                  <Switch defaultChecked />
-                </div>
-              </div>
-            </Card>
-          </TabsContent>
-        </Tabs>
+            <div className="space-y-2">
+              <Label htmlFor="newPassword">New Password *</Label>
+              <Input
+                id="newPassword"
+                name="newPassword"
+                type="password"
+                value={formData.newPassword}
+                onChange={handleChange}
+                placeholder="Enter your new password (minimum 6 characters)"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword">Confirm New Password *</Label>
+              <Input
+                id="confirmPassword"
+                name="confirmPassword"
+                type="password"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                placeholder="Confirm your new password"
+                required
+              />
+            </div>
+
+            <Button
+              type="submit"
+              disabled={loading || success}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 mt-6"
+            >
+              {loading ? 'Updating...' : success ? 'Password Updated!' : 'Update Password'}
+            </Button>
+          </form>
+        </Card>
       </div>
     </DashboardLayout>
   );

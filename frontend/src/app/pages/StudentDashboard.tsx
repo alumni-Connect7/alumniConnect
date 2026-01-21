@@ -29,13 +29,11 @@ export default function StudentDashboard() {
   const [jobs, setJobs] = useState<JobPost[]>([]);
   const [stories, setStories] = useState<SuccessStory[]>([]);
   const [directory, setDirectory] = useState<Array<{ user: any; profile?: Profile }>>([]);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const load = async () => {
       try {
-        setLoading(true);
         setError(null);
         const [eventsRes, jobsRes, storiesRes, directoryRes] = await Promise.all([
           eventsAPI.list({ upcoming: true }),
@@ -51,8 +49,6 @@ export default function StudentDashboard() {
       } catch (err) {
         const { message } = handleAPIError(err);
         setError(message);
-      } finally {
-        setLoading(false);
       }
     };
 
