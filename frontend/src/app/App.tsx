@@ -22,6 +22,7 @@ import ReportsPage from './pages/ReportsPage';
 import SettingsPage from './pages/SettingsPage';
 import ProfilePage from './pages/ProfilePage';
 import CareerRecommendationPage from './pages/CareerRecommendationPage';
+import SuccessStories from './pages/SuccessStories';
 
 export default function App() {
   return (
@@ -81,6 +82,7 @@ export default function App() {
             element={<ProtectedRoute element={<MentorshipPage />} />}
           />
           <Route path="/events" element={<ProtectedRoute element={<EventsPage />} />} />
+          <Route path="/success-stories" element={<ProtectedRoute element={<SuccessStories />} />} />
           <Route path="/profile" element={<ProtectedRoute element={<ProfilePage />} />} />
           <Route path="/settings" element={<ProtectedRoute element={<SettingsPage />} />} />
 

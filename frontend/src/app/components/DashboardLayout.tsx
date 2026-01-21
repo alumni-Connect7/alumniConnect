@@ -12,7 +12,8 @@ import {
   LogOut,
   Menu,
   X,
-  Brain
+  Brain,
+  Star
 } from 'lucide-react';
 import { Button } from './ui/button';
 import {
@@ -55,9 +56,9 @@ export default function DashboardLayout({ children, role, userName = "User" }: D
   const commonNavItems: NavItem[] = [
     { label: 'Dashboard', icon: <LayoutDashboard className="w-5 h-5" />, path: `/${role}/dashboard` },
     { label: 'Alumni Directory', icon: <Users className="w-5 h-5" />, path: '/alumni-listing' },
-    { label: 'Mentorship', icon: <UserCircle className="w-5 h-5" />, path: '/mentorship' },
     { label: 'Events', icon: <Calendar className="w-5 h-5" />, path: '/events' },
     { label: 'Career Recommendation', icon: <Brain className="w-5 h-5" />, path: '/career-recommendation' },
+    { label: 'Success Stories', icon: <Star className="w-5 h-5" />, path: '/success-stories' },
   ];
 
   const managementNavItems: NavItem[] = [

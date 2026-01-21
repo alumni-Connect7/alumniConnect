@@ -62,7 +62,7 @@ export default function StudentDashboard() {
   const stats = useMemo(
     () => [
       {
-        label: 'Mentors Available',
+        label: 'Alumni',
         value: directory.length.toString(),
         icon: <Users className="w-6 h-6" />,
         color: 'bg-blue-500',
@@ -80,13 +80,12 @@ export default function StudentDashboard() {
         value: jobs.length.toString(),
         icon: <TrendingUp className="w-6 h-6" />,
         color: 'bg-orange-500',
-        path: '/mentorship',
+        path: '/success-stories',
       },
     ],
     [directory.length, events.length, jobs.length]
   );
 
-  const recommendedMentors = useMemo(() => directory.slice(0, 3), [directory]);
   const upcomingEvents = useMemo(() => events.slice(0, 3), [events]);
   const openJobs = useMemo(() => jobs.slice(0, 3), [jobs]);
 
@@ -138,20 +137,8 @@ export default function StudentDashboard() {
               >
                 <UserCircle className="w-5 h-5 mr-3 text-blue-600" />
                 <div className="text-left">
-                  <div>Find a Mentor</div>
+                  <div>Find Alumni</div>
                   <div className="text-xs text-slate-500">Browse approved alumni</div>
-                </div>
-              </Button>
-
-              <Button
-                variant="outline"
-                className="justify-start h-auto py-4"
-                onClick={() => navigate('/mentorship')}
-              >
-                <Users className="w-5 h-5 mr-3 text-purple-600" />
-                <div className="text-left">
-                  <div>Explore Mentorship</div>
-                  <div className="text-xs text-slate-500">Connect with alumni</div>
                 </div>
               </Button>
 
@@ -187,45 +174,6 @@ export default function StudentDashboard() {
         </div>
 
         <div className="grid lg:grid-cols-2 gap-6">
-          {/* Recommended Mentors */}
-          <Card className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl text-slate-900">Recommended Mentors</h2>
-              <Button variant="ghost" size="sm" onClick={() => navigate('/mentorship')}>
-                View All <ArrowRight className="w-4 h-4 ml-1" />
-              </Button>
-            </div>
-            <div className="space-y-4">
-              {recommendedMentors.map(({ user: mentor, profile }) => (
-                <div
-                  key={mentor._id}
-                  className="p-4 border rounded-lg hover:border-blue-600 transition-colors cursor-pointer"
-                >
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="flex-1">
-                      <h3 className="font-medium text-slate-900">{mentor.name}</h3>
-                      <p className="text-sm text-slate-600">{profile?.currentRole || mentor.role}</p>
-                      <p className="text-sm text-slate-500">{profile?.company || 'Alumni'}</p>
-                    </div>
-                    <div className="flex items-center gap-1 text-sm">
-                      <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
-                      <span className="font-medium text-slate-900">{profile?.skills?.length || 1} skills</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <Badge variant="secondary" className="text-xs">
-                      {(profile?.skills && profile.skills[0]?.name) || 'Mentor'}
-                    </Badge>
-                    <Button size="sm" onClick={() => navigate('/mentorship')}>Connect</Button>
-                  </div>
-                </div>
-              ))}
-              {!recommendedMentors.length && (
-                <p className="text-sm text-slate-500">No approved alumni found yet.</p>
-              )}
-            </div>
-          </Card>
-
           {/* Upcoming Events */}
           <Card className="p-6">
             <div className="flex items-center justify-between mb-4">
